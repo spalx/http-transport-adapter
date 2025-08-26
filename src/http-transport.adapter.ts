@@ -4,6 +4,7 @@ import { ZodError } from 'zod';
 import { CorrelatedRequestDTO, CorrelatedResponseDTO, TransportAdapter, transportService } from 'transport-pkg';
 import { AppRunPriority } from 'app-life-cycle-pkg';
 import { BaseError, BadRequestError, InternalServerError } from 'rest-pkg';
+import { httpLogger } from 'common-loggers-pkg';
 
 const HTTP_TRANSPORT_ENDPOINT = '/http-transport';
 
@@ -35,6 +36,8 @@ class HTTPTransportAdapter implements TransportAdapter {
       let body = '';
       req.on('data', chunk => { body += chunk; });
       req.on('end', async () => {
+        httpLogger.info(`Request received: ${body}`);
+
         const data: CorrelatedRequestDTO | null = body ? JSON.parse(body) : null;
         await this.handleHTTPRequest(data, res);
       });
@@ -80,10 +83,15 @@ class HTTPTransportAdapter implements TransportAdapter {
     if (data.request_id && this.pendingResponses.has(data.request_id)) {
       const resolve = this.pendingResponses.get(data.request_id);
       if (resolve) {
+        httpLogger.info(`Response sent: ${JSON.stringify(data)}`);
         resolve(data);
         this.pendingResponses.delete(data.request_id);
       }
     }
+  }
+
+  private getRequestUrl(options: Record<string, unknown>) {
+    return `http://${options['host']}:${options['port']}${HTTP_TRANSPORT_ENDPOINT}`;
   }
 
   private sendHTTPRequest(data: CorrelatedRequestDTO, options: Record<string, unknown>, timeout?: number): Promise<CorrelatedResponseDTO> {
@@ -101,6 +109,8 @@ class HTTPTransportAdapter implements TransportAdapter {
         },
       };
 
+      httpLogger.info(`Request sent: POST ${this.getRequestUrl(options)} ${jsonData}`);
+
       const req = http.request(requestOptions, (res) => {
         let responseData = '';
 
@@ -109,6 +119,7 @@ class HTTPTransportAdapter implements TransportAdapter {
         });
 
         res.on('end', () => {
+          httpLogger.info(`Response received: ${responseData}`);
           resolve(JSON.parse(responseData));
         });
       });
