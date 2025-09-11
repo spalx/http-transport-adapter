@@ -1,7 +1,5 @@
 import http, { createServer, IncomingMessage, ServerResponse, Server } from 'http';
-import { v4 as uuidv4 } from 'uuid';
-import { ZodError } from 'zod';
-import { CorrelatedRequestDTO, CorrelatedResponseDTO, TransportAdapter, transportService } from 'transport-pkg';
+import { CorrelatedMessage, TransportAdapter, transportService } from 'transport-pkg';
 import { IAppPkg, AppRunPriority } from 'app-life-cycle-pkg';
 import { BaseError, BadRequestError, InternalServerError } from 'rest-pkg';
 import { httpLogger } from 'common-loggers-pkg';
@@ -19,7 +17,7 @@ class HTTPTransportAdapter extends TransportAdapter implements IAppPkg {
   }
 
   async init(): Promise<void> {
-    const actionHandlers: Record<string, (data: CorrelatedRequestDTO) => Promise<object>> = transportService.getActionHandlers();
+    const actionHandlers: Record<string, (req: CorrelatedMessage) => Promise<object>> = transportService.getActionHandlers();
     if (!Object.keys(actionHandlers).length) {
       return;
     }
@@ -39,8 +37,8 @@ class HTTPTransportAdapter extends TransportAdapter implements IAppPkg {
       req.on('end', async () => {
         httpLogger.info(`Request received: ${body}`);
 
-        const data: CorrelatedRequestDTO | null = body ? JSON.parse(body) : null;
-        await this.handleHTTPRequest(data, res);
+        const req: CorrelatedMessage | null = body ? JSON.parse(body) : null;
+        await this.handleHTTPRequest(req, res);
       });
     });
 
@@ -63,25 +61,21 @@ class HTTPTransportAdapter extends TransportAdapter implements IAppPkg {
     return AppRunPriority.Lowest;
   }
 
-  async send(data: CorrelatedRequestDTO, options: Record<string, unknown>, timeout?: number): Promise<CorrelatedResponseDTO> {
-    if (!data.request_id) {
-      data.request_id = uuidv4();
-    }
-
+  async send(req: CorrelatedMessage, options: Record<string, unknown>, timeout?: number): Promise<CorrelatedMessage> {
     if (!options['host'] || !options['port']) {
       throw new BadRequestError('Host and/or port missing in transport options');
     }
 
-    return await this.sendHTTPRequest(data, options, timeout);
+    return await this.sendHTTPRequest(req, options, timeout);
   }
 
   private getRequestUrl(options: Record<string, unknown>) {
     return `http://${options['host']}:${options['port']}${HTTP_TRANSPORT_ENDPOINT}`;
   }
 
-  private sendHTTPRequest(data: CorrelatedRequestDTO, options: Record<string, unknown>, timeout?: number): Promise<CorrelatedResponseDTO> {
+  private sendHTTPRequest(req: CorrelatedMessage, options: Record<string, unknown>, timeout?: number): Promise<CorrelatedMessage> {
     return new Promise((resolve, reject) => {
-      const jsonData: string = JSON.stringify(data);
+      const jsonData: string = JSON.stringify(req);
 
       const requestOptions: http.RequestOptions = {
         hostname: options['host'] as string,
@@ -96,7 +90,7 @@ class HTTPTransportAdapter extends TransportAdapter implements IAppPkg {
 
       httpLogger.info(`Request sent: POST ${this.getRequestUrl(options)} ${jsonData}`);
 
-      const req = http.request(requestOptions, (res) => {
+      const httpReq = http.request(requestOptions, (res) => {
         let responseData = '';
 
         res.on('data', (chunk) => {
@@ -109,33 +103,33 @@ class HTTPTransportAdapter extends TransportAdapter implements IAppPkg {
         });
       });
 
-      req.on('error', (err) => reject(err));
+      httpReq.on('error', (err) => reject(err));
 
       if (timeout) {
-        req.setTimeout(timeout, () => {
-          req.destroy(new InternalServerError(`Request timed out after ${timeout}ms`));
+        httpReq.setTimeout(timeout, () => {
+          httpReq.destroy(new InternalServerError(`Request timed out after ${timeout}ms`));
         });
       }
 
-      req.write(jsonData);
-      req.end();
+      httpReq.write(jsonData);
+      httpReq.end();
     });
   }
 
-  private async handleHTTPRequest(data: CorrelatedRequestDTO | null, res: ServerResponse): Promise<void> {
-    const actionHandlers: Record<string, (data: CorrelatedRequestDTO) => Promise<object>> = transportService.getActionHandlers();
+  private async handleHTTPRequest(req: CorrelatedMessage | null, res: ServerResponse): Promise<void> {
+    const actionHandlers: Record<string, (req: CorrelatedMessage) => Promise<object>> = transportService.getActionHandlers();
 
     try {
-      if (!data || !actionHandlers[data.action]) {
-        throw new BadRequestError(`Invalid action provided: ${data?.action}`);
+      if (!req || !actionHandlers[req.action]) {
+        throw new BadRequestError(`Invalid action provided: ${req?.action}`);
       }
 
-      const handler: (data: CorrelatedRequestDTO) => Promise<object> = actionHandlers[data.action];
+      const handler: (req: CorrelatedMessage) => Promise<object> = actionHandlers[req.action];
       if (!handler) {
-        throw new InternalServerError(`Handler not defined for action: ${data.action}`);
+        throw new InternalServerError(`Handler not defined for action: ${req.action}`);
       }
 
-      await this.executeActionHandler(handler, data, res);
+      await this.executeActionHandler(handler, req, res);
     } catch (error) {
       let status = 500;
       let errorMessage = 'Internal Server Error';
@@ -150,36 +144,24 @@ class HTTPTransportAdapter extends TransportAdapter implements IAppPkg {
     }
   }
 
-  private async executeActionHandler(handler: (data: CorrelatedRequestDTO) => Promise<object>, data: CorrelatedRequestDTO, res: ServerResponse): Promise<void> {
-    let status = 200;
-    let errorMessage: string = '';
-    let responseData: object | null = null;
+  private async executeActionHandler(handler: (req: CorrelatedMessage) => Promise<object>, req: CorrelatedMessage, res: ServerResponse): Promise<void> {
+    let error: unknown | undefined;
+    let responseData: object | undefined;
 
     try {
-      responseData = await handler(data);
-    } catch (error) {
-      if (error instanceof ZodError) {
-        status = 400;
-        errorMessage = error.errors.map(e => e.message).join(', ');
-      } else if (error instanceof BaseError) {
-        status = error.code;
-        errorMessage = error.message;
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      } else {
-        status = 500;
-        errorMessage = 'Internal Server Error';
-      }
+      responseData = await handler(req);
+    } catch (err) {
+      error = err;
     } finally {
       res.writeHead(200, { 'Content-Type': 'application/json' });
 
-      const response: CorrelatedResponseDTO = {
-        action: data.action,
-        correlation_id: data.correlation_id,
-        data: responseData ?? {},
-        error: errorMessage,
-        status
-      };
+      const response: CorrelatedMessage = CorrelatedMessage.create(
+        req.correlation_id,
+        req.action,
+        req.transport,
+        responseData,
+        error
+      );
 
       res.end(JSON.stringify(response));
     }
