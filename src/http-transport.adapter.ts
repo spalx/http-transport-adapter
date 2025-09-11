@@ -99,7 +99,7 @@ class HTTPTransportAdapter extends TransportAdapter implements IAppPkg {
 
         res.on('end', () => {
           httpLogger.info(`Response received: ${responseData}`);
-          resolve(JSON.parse(responseData));
+          resolve(CorrelatedMessage.parse(responseData));
         });
       });
 
