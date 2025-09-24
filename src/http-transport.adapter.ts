@@ -58,7 +58,7 @@ class HTTPTransportAdapter extends TransportAdapter implements IAppPkg {
   }
 
   getPriority(): number {
-    return AppRunPriority.Lowest;
+    return AppRunPriority.Highest;
   }
 
   async send(req: CorrelatedMessage, options: Record<string, unknown>, timeout?: number): Promise<CorrelatedMessage> {
