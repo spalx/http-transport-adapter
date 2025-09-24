@@ -57,8 +57,16 @@ class HTTPTransportAdapter extends TransportAdapter implements IAppPkg {
     }
   }
 
+  getName(): string {
+    return 'http-transport-adapter';
+  }
+
   getPriority(): number {
     return AppRunPriority.Highest;
+  }
+
+  getDependencies(): IAppPkg[] {
+    return [transportService];
   }
 
   async send(req: CorrelatedMessage, options: Record<string, unknown>, timeout?: number): Promise<CorrelatedMessage> {
