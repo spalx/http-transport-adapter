@@ -1,6 +1,6 @@
 {
   "name": "http-transport-adapter",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
@@ -10,7 +10,7 @@
     "app-life-cycle-pkg": "git+git@github.com:spalx/app-life-cycle-pkg.git#1.0.6",
     "common-loggers-pkg": "git+git@github.com:spalx/common-loggers-pkg.git#1.0.3",
     "rest-pkg": "git+git@github.com:spalx/rest-pkg.git#1.0.3",
-    "transport-pkg": "git+git@github.com:spalx/transport-pkg.git#1.1.6"
+    "transport-pkg": "git+git@github.com:spalx/transport-pkg.git#1.1.7"
   },
   "devDependencies": {
     "@types/node": "^22.15.21",

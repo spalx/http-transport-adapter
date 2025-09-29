@@ -69,19 +69,19 @@ class HTTPTransportAdapter extends TransportAdapter implements IAppPkg {
     return [transportService];
   }
 
-  async send(req: CorrelatedMessage, options: Record<string, unknown>, timeout?: number): Promise<CorrelatedMessage> {
+  async send(req: CorrelatedMessage, options: Record<string, unknown>): Promise<CorrelatedMessage> {
     if (!options['host'] || !options['port']) {
       throw new BadRequestError('Host and/or port missing in transport options');
     }
 
-    return await this.sendHTTPRequest(req, options, timeout);
+    return await this.sendHTTPRequest(req, options);
   }
 
   private getRequestUrl(options: Record<string, unknown>) {
     return `http://${options['host']}:${options['port']}${HTTP_TRANSPORT_ENDPOINT}`;
   }
 
-  private sendHTTPRequest(req: CorrelatedMessage, options: Record<string, unknown>, timeout?: number): Promise<CorrelatedMessage> {
+  private sendHTTPRequest(req: CorrelatedMessage, options: Record<string, unknown>): Promise<CorrelatedMessage> {
     return new Promise((resolve, reject) => {
       const jsonData: string = JSON.stringify(req);
 
@@ -112,13 +112,6 @@ class HTTPTransportAdapter extends TransportAdapter implements IAppPkg {
       });
 
       httpReq.on('error', (err) => reject(err));
-
-      if (timeout) {
-        httpReq.setTimeout(timeout, () => {
-          httpReq.destroy(new InternalServerError(`Request timed out after ${timeout}ms`));
-        });
-      }
-
       httpReq.write(jsonData);
       httpReq.end();
     });
