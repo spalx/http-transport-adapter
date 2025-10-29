@@ -9,7 +9,7 @@
   "dependencies": {
     "app-life-cycle-pkg": "git+git@github.com:spalx/app-life-cycle-pkg.git#1.0.7",
     "common-loggers-pkg": "git+git@github.com:spalx/common-loggers-pkg.git#1.0.4",
-    "rest-pkg": "git+git@github.com:spalx/rest-pkg.git#1.0.4",
+    "rest-pkg": "git+git@github.com:spalx/rest-pkg.git#1.0.5",
     "transport-pkg": "git+git@github.com:spalx/transport-pkg.git#1.1.8"
   },
   "devDependencies": {
