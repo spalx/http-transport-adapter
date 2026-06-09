@@ -1,8 +1,8 @@
 import http, { createServer, IncomingMessage, ServerResponse, Server } from 'http';
-import { CorrelatedMessage, TransportAdapter, transportService } from 'transport-pkg';
-import { IAppPkg, AppRunPriority } from 'app-life-cycle-pkg';
-import { BaseError, BadRequestError, InternalServerError } from 'rest-pkg';
-import { httpLogger } from 'common-loggers-pkg';
+import { CorrelatedMessage, TransportAdapter, transportService } from '@spalx/transport-pkg';
+import { IAppPkg, AppRunPriority } from '@spalx/app-life-cycle-pkg';
+import { BaseError, BadRequestError, InternalServerError } from '@spalx/rest-pkg';
+import { httpLogger } from '@spalx/common-loggers-pkg';
 
 const HTTP_TRANSPORT_ENDPOINT = '/http-transport';
 
