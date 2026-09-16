@@ -1,6 +1,6 @@
 {
   "name": "@spalx/http-transport-adapter",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
@@ -10,10 +10,10 @@
     "@spalx/app-life-cycle-pkg": "^1.0.8",
     "@spalx/common-loggers-pkg": "^1.0.5",
     "@spalx/rest-pkg": "^1.0.8",
-    "@spalx/transport-pkg": "^1.2.3"
+    "@spalx/transport-pkg": "^1.3.0"
   },
   "devDependencies": {
-    "@types/node": "^25.9.2",
-    "typescript": "^6.0.3"
+    "@types/node": "^22.20.2",
+    "typescript": "^7.0.2"
   }
 }

@@ -1,0 +1,2 @@
+minimumReleaseAgeExclude:
+  - '@spalx/transport-pkg'
