@@ -35,9 +35,9 @@ class HTTPTransportAdapter extends TransportAdapter implements IAppPkg {
       let body = '';
       req.on('data', chunk => { body += chunk; });
       req.on('end', async () => {
-        httpLogger.info(`Request received: ${body}`);
-
         const req: CorrelatedMessage | null = body ? JSON.parse(body) : null;
+        httpLogger.info(`Request received: POST ${HTTP_TRANSPORT_ENDPOINT} ${this.describeRequest(req, body)}`);
+
         await this.handleHTTPRequest(req, res);
       });
     });
@@ -77,6 +77,11 @@ class HTTPTransportAdapter extends TransportAdapter implements IAppPkg {
     return await this.sendHTTPRequest(req, options);
   }
 
+  // Bodies can carry files and personal data, so only what identifies the request is logged.
+  private describeRequest(req: CorrelatedMessage | null, body: string): string {
+    return `${req?.action} ${req?.correlation_id} (${Buffer.byteLength(body)} bytes)`;
+  }
+
   private getRequestUrl(options: Record<string, unknown>) {
     return `http://${options['host']}:${options['port']}${HTTP_TRANSPORT_ENDPOINT}`;
   }
@@ -96,7 +101,7 @@ class HTTPTransportAdapter extends TransportAdapter implements IAppPkg {
         },
       };
 
-      httpLogger.info(`Request sent: POST ${this.getRequestUrl(options)} ${jsonData}`);
+      httpLogger.info(`Request sent: POST ${this.getRequestUrl(options)} ${this.describeRequest(req, jsonData)}`);
 
       const httpReq = http.request(requestOptions, (res) => {
         let responseData = '';
