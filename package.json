@@ -1,9 +1,10 @@
 {
   "name": "@spalx/http-transport-adapter",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
+    "test": "tsc && node --test 'test/*.test.ts'",
     "prepare": "npm run build"
   },
   "dependencies": {
@@ -14,6 +15,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.20.2",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "winston-transport": "^4.9.0"
   }
 }
